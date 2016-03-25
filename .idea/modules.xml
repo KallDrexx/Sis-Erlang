@@ -3,6 +3,7 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/SisErlang.iml" filepath="$PROJECT_DIR$/SisErlang.iml" />
+      <module fileurl="file://$PROJECT_DIR$/apps/tcp_listener/tcp_listener.iml" filepath="$PROJECT_DIR$/apps/tcp_listener/tcp_listener.iml" />
     </modules>
   </component>
 </project>
