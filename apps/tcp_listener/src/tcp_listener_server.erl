@@ -1,6 +1,6 @@
 -module(tcp_listener_server).
 -behavior(gen_server).
--record(state, {socket}).
+-record(state, {socket, on_accept_mfa}).
 
 %% API
 -export([start_link/1]).
@@ -8,17 +8,22 @@
 
 start_link(Socket) -> gen_server:start_link(?MODULE, Socket, []).
 
-init(Socket) ->
+init([Socket, OnAcceptMfa]) ->
   gen_server:cast(self(), accept),
-  {ok, #state{socket = Socket}}.
+  {ok, #state{socket = Socket, on_accept_mfa = OnAcceptMfa}}.
 
 handle_call(_Request, _From, State) ->
   {noreply, State}.
 
-handle_cast(accept, State=#state{socket = Socket}) ->
-  {ok, AcceptSocket} = gen_tcp:accept(Socket),
-  tcp_listener_sup:start_acceptor(),
-  {noreply, State#state{socket = AcceptSocket}}.
+handle_cast(accept, State=#state{}) ->
+  {Module, Function, Arguments} = State#state.on_accept_mfa,
+  {ok, AcceptSocket} = gen_tcp:accept(State#state.socket),
+
+  Pid = spawn(Module, Function, [AcceptSocket | Arguments]),
+  ok = gen_tcp:controlling_process(AcceptSocket, Pid),
+
+  gen_server:cast(accept, State),
+  {noreply, State}.
 
 handle_info(_Info, State) ->
   {noreply, State}.
