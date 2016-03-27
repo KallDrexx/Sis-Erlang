@@ -3,10 +3,10 @@
 -record(state, {socket, on_accept_mfa}).
 
 %% API
--export([start_link/1]).
+-export([start_link/2]).
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
 
-start_link(Socket) -> gen_server:start_link(?MODULE, Socket, []).
+start_link(Socket, OnAcceptMfa) -> gen_server:start_link(?MODULE, [Socket, OnAcceptMfa], []).
 
 init([Socket, OnAcceptMfa]) ->
   gen_server:cast(self(), accept),
