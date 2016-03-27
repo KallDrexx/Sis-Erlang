@@ -1,11 +1,15 @@
 -module(tcp_listener_echo_server).
 -behavior(gen_server).
+-behavior(tcp_listener_accept_receiver).
 -record(state, {socket}).
 -define(TcpMessage(Message), {tcp, _Port, Message}).
 
 %% API
--export([start/1]).
+-export([start/1, socket_accepted/2]).
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
+
+socket_accepted(AcceptedSocket, _Arguments) ->
+  start(AcceptedSocket).
 
 start(Socket) ->
   io:format("Start called ~n", []),

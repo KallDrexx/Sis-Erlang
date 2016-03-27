@@ -1,0 +1,2 @@
+-module(tcp_listener_accept_receiver).
+-callback socket_accepted(AcceptedSocket :: port(), Arguments :: list(term())) -> 'ok'.

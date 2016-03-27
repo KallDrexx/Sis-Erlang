@@ -6,6 +6,7 @@
   {env, [
     {port, 9090},
     {acceptor_pool_size, 20},
-    {on_accept_mfa, {tcp_listener_echo_server, start, []}}
+    {on_accept_module, tcp_listener_echo_server},
+    {on_accept_arguments, []}
   ]}
 ]}.
