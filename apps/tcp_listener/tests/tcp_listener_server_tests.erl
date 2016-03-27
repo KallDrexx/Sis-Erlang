@@ -2,7 +2,6 @@
 -include_lib("eunit/include/eunit.hrl").
 -define(setup(F), {setup, fun start/0, fun stop/1, F}).
 -define(test_port, 9394).
--record(state, {socket, on_accept_mfa}). % Copied from tcp_listener_server
 
 -export([send_self_message/2]).
 
@@ -21,9 +20,9 @@ stop(ListenSocket) ->
 %% Tests
 test_mfa(ListenSocket) ->
   Mfa = {?MODULE, send_self_message, [self()]},
-  State = #state{socket = ListenSocket, on_accept_mfa = Mfa},
-  spawn_link(fun () -> tcp_listener_server:handle_cast(accept, State) end),
 
+  {ok, Pid} = tcp_listener_server:start_link(ListenSocket, Mfa),
+  ok = gen_server:cast(Pid, accept),
   {ok, _} = gen_tcp:connect({127,0,0,1}, ?test_port, []),
 
   receive

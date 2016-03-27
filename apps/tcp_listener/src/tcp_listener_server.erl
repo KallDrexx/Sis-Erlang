@@ -17,13 +17,16 @@ handle_call(_Request, _From, State) ->
 
 handle_cast(accept, State=#state{}) ->
   {Module, Function, Arguments} = State#state.on_accept_mfa,
-  {ok, AcceptSocket} = gen_tcp:accept(State#state.socket),
 
-  Pid = spawn(Module, Function, [AcceptSocket | Arguments]),
-  ok = gen_tcp:controlling_process(AcceptSocket, Pid),
+  case gen_tcp:accept(State#state.socket) of
+    {error, closed} -> {stop, normal, State};
+    {ok, AcceptSocket} ->
+      Pid = spawn(Module, Function, [AcceptSocket | Arguments]),
+      ok = gen_tcp:controlling_process(AcceptSocket, Pid),
 
-  gen_server:cast(accept, State),
-  {noreply, State}.
+      gen_server:cast(accept, State),
+      {noreply, State}
+  end.
 
 handle_info(_Info, State) ->
   {noreply, State}.
