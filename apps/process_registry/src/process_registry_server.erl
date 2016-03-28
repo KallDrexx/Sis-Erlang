@@ -3,19 +3,20 @@
 -record(state, {known_pids}).
 
 %% API
--export([start_link/0, register_pid/3, unregister_pid_key/2, get_pid/2]).
+-export([start_link/0, register_pid/2, unregister_pid_key/1, get_pid/1, stop/0]).
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
 
-start_link() -> gen_server:start_link(?MODULE, [], []).
+start_link() -> gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
+stop() -> gen_server:stop(?MODULE).
 
-register_pid(RegistryServerRef, PidToRegister, PidKey) ->
-  gen_server:cast(RegistryServerRef, {register, {PidToRegister, PidKey}}).
+register_pid(PidToRegister, PidKey) when is_pid(PidToRegister) ->
+  gen_server:cast(?MODULE, {register, {PidToRegister, PidKey}}).
 
-unregister_pid_key(RegistryServerRef, PidKey) ->
-  gen_server:cast(RegistryServerRef, {unregister, PidKey}).
+unregister_pid_key(PidKey) ->
+  gen_server:cast(?MODULE, {unregister, PidKey}).
 
-get_pid(RegistryServerRef, PidKey) ->
-  gen_server:call(RegistryServerRef, {get_pid, PidKey}).
+get_pid(PidKey) ->
+  gen_server:call(?MODULE, {get_pid, PidKey}).
 
 init(_Args) ->
   {ok, #state{known_pids = orddict:new()}}.
