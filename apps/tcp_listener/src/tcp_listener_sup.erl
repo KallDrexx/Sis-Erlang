@@ -2,16 +2,13 @@
 -behavior(supervisor).
 
 %% API
--export([start_link/0]).
+-export([start_link/1]).
 -export([init/1]).
 
-start_link() -> supervisor:start_link({local, ?MODULE}, ?MODULE, []).
+start_link({Port, PoolSize, OnAcceptModule, OnAcceptArguments}) ->
+  supervisor:start_link({local, ?MODULE}, ?MODULE, [{Port, PoolSize, OnAcceptModule, OnAcceptArguments}]).
 
-init([]) ->
-  {ok, Port} = application:get_env(port),
-  {ok, PoolSize} = application:get_env(acceptor_pool_size),
-  {ok, OnAcceptModule} = application:get_env(on_accept_module),
-  {ok, OnAcceptArguments} = application:get_env(on_accept_arguments),
+init([{Port, PoolSize, OnAcceptModule, OnAcceptArguments}]) ->
   {ok, ListenSocket} = gen_tcp:listen(Port, [{active, false}]),
   spawn_link(fun() -> start_initial_listeners(PoolSize) end),
 
