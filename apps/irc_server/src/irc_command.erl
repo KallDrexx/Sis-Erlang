@@ -17,13 +17,13 @@ get_raw_command([Letter|Rest], Acc) -> get_raw_command(Rest, [Letter|Acc]).
 
 form_command(#raw_command{command = "NICK", tail = Nick}) -> #nick_command{nick_name = Nick};
 form_command(#raw_command{command = "USER", tail = Arguments}) -> get_user_command(string:tokens(Arguments, " "));
-form_command(#raw_command{command = "JOIN", tail = Arguments}) -> get_join_command(string:tokens(Arguments, " "), []).
+form_command(#raw_command{command = "JOIN", tail = Arguments}) -> get_join_command(string:tokens(Arguments, ","), []).
 
 get_user_command([Username, Hostname, ServerName, RealName | _]) ->
   #user_command{user_name = Username, host_name = Hostname, real_name = RealName, server_name = ServerName};
 
 get_user_command(_) -> undefined.
 
-get_join_command([], Acc) -> #join_command{channels = Acc};
+get_join_command([], Acc) -> #join_command{channels = lists:reverse(Acc)};
 get_join_command([Channel], Acc) -> get_join_command([], [Channel|Acc]);
 get_join_command([Channel|Rest], Acc) -> get_join_command(Rest, [Channel|Acc]).
