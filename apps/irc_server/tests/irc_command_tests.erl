@@ -17,3 +17,6 @@ can_parse_user_command_test() ->
 
 user_command_returns_undefined_if_less_than_4_arguments_provided_test() ->
   ?assertMatch(undefined, irc_command:parse("USER username hostname servername")).
+
+can_parse_join_command_with_single_channel_test() ->
+  ?assertMatch(#join_command{channels = ["channel"]}, irc_command:parse("JOIN channel")).
