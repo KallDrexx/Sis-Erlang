@@ -1,0 +1,1 @@
+-record(nick_command, {nickname=""}).
