@@ -23,3 +23,9 @@ can_parse_join_command_with_single_channel_test() ->
 
 can_parse_join_command_with_multiple_channels_test() ->
   ?assertMatch(#join_command{channels = ["c1","c2"]}, irc_command:parse("JOIN c1,c2")).
+
+can_parse_part_command_with_single_channel_test() ->
+  ?assertMatch(#part_command{channels = ["channel"], message = "message"}, irc_command:parse("PART channel message")).
+
+can_part_part_command_with_multiple_channels_test() ->
+  ?assertMatch(#part_command{channels = ["c1","c2"], message = "message"}, irc_command:parse("PART c1,c2 message")).
