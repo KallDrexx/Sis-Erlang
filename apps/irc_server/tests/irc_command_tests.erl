@@ -29,3 +29,9 @@ can_parse_part_command_with_single_channel_test() ->
 
 can_part_part_command_with_multiple_channels_test() ->
   ?assertMatch(#part_command{channels = ["c1","c2"], message = "message"}, irc_command:parse("PART c1,c2 message")).
+
+can_parse_private_message_command_test() ->
+  ?assertMatch(#priv_msg_command{target = "dest", message = "message"}, irc_command:parse("PRIVMSG dest message")).
+
+returns_undefined_if_private_message_does_not_have_target_and_message_test() ->
+  ?assertMatch(undefined, irc_command:parse("PRIVMSG dest")).
