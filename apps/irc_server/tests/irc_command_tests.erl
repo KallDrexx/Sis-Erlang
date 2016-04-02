@@ -35,3 +35,6 @@ can_parse_private_message_command_test() ->
 
 returns_undefined_if_private_message_does_not_have_target_and_message_test() ->
   ?assertMatch(undefined, irc_command:parse("PRIVMSG dest")).
+
+can_parse_pong_command_test() ->
+  ?assertMatch(#pong_command{}, irc_command:parse("PONG")).

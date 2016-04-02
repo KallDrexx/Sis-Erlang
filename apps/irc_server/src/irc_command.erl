@@ -19,7 +19,8 @@ form_command(#raw_command{command = "NICK", tail = Nick}) -> #nick_command{nick_
 form_command(#raw_command{command = "USER", tail = Arguments}) -> get_user_command(string:tokens(Arguments, " "));
 form_command(#raw_command{command = "JOIN", tail = Arguments}) -> get_join_command(string:tokens(Arguments, ","), []);
 form_command(#raw_command{command = "PART", tail = Arguments}) -> get_part_command(string:tokens(Arguments, ","), [], []);
-form_command(#raw_command{command = "PRIVMSG", tail = Arguments}) -> extract_priv_message(Arguments, []).
+form_command(#raw_command{command = "PRIVMSG", tail = Arguments}) -> extract_priv_message(Arguments, []);
+form_command(#raw_command{command = "PONG", tail = _}) -> #pong_command{}.
 
 get_user_command([Username, Hostname, ServerName, RealName | _]) ->
   #user_command{user_name = Username, host_name = Hostname, real_name = RealName, server_name = ServerName};
