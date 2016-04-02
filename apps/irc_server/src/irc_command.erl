@@ -17,7 +17,12 @@ get_raw_command([32|Rest], Acc) -> #raw_command{command = lists:reverse(Acc), ta
 get_raw_command([Letter|Rest], Acc) -> get_raw_command(Rest, [Letter|Acc]).
 
 form_command(#raw_command{command = "NICK", tail = Nick}) -> #nick_command{nick_name = Nick};
-form_command(#raw_command{command = "USER", tail = Arguments}) -> get_user_command(string:tokens(Arguments, " "));
+form_command(#raw_command{command = "USER", tail = Arguments}) ->
+  case get_user_command(string:tokens(Arguments, " ")) of
+    undefined -> #unknown_command{raw_command = lists:flatten(["USER " | Arguments])};
+    X -> X
+  end;
+
 form_command(#raw_command{command = "JOIN", tail = Arguments}) -> get_join_command(string:tokens(Arguments, ","), []);
 form_command(#raw_command{command = "PART", tail = Arguments}) -> get_part_command(string:tokens(Arguments, ","), [], []);
 form_command(#raw_command{command = "PRIVMSG", tail = Arguments}) -> extract_priv_message(Arguments, []);
@@ -49,8 +54,8 @@ extract_part_message([], ChannelSoFar) -> {lists:reverse(ChannelSoFar), ""};
 extract_part_message([32|Rest], ChannelSoFar) -> {lists:reverse(ChannelSoFar), Rest};
 extract_part_message([Letter|Rest], ChannelSoFar) -> extract_part_message(Rest, [Letter|ChannelSoFar]).
 
-extract_priv_message([], []) -> undefined;
-extract_priv_message([], _TargetAcc) -> undefined;
+extract_priv_message([], []) -> #unknown_command{raw_command = "PRIVMSG"};
+extract_priv_message([], TargetAcc) -> #unknown_command{raw_command = lists:flatten(["PRIVMSG ", lists:reverse(TargetAcc)])};
 extract_priv_message([32|Rest], TargetAcc) -> #priv_msg_command{target = lists:reverse(TargetAcc), message = Rest};
 extract_priv_message([Letter|Rest], TargetAcc) -> extract_priv_message(Rest, [Letter|TargetAcc]).
 
