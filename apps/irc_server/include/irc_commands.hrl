@@ -4,4 +4,5 @@
 -record(part_command, {channels=[], message=""}).
 -record(priv_msg_command, {target ="", message}).
 -record(pong_command, {}).
+-record(quit_command, {message=""}).
 -record(unknown_command, {raw_command=""}).

@@ -41,3 +41,6 @@ can_parse_pong_command_test() ->
 
 unknown_command_returns_unknown_command_record_test() ->
   ?assertMatch(#unknown_command{raw_command = "omg test"}, irc_command:parse("omg test")).
+
+can_parse_quit_command_test() ->
+  ?assertMatch(#quit_command{message = "good bye!"}, irc_command:parse("QUIT good bye!")).

@@ -22,6 +22,7 @@ form_command(#raw_command{command = "JOIN", tail = Arguments}) -> get_join_comma
 form_command(#raw_command{command = "PART", tail = Arguments}) -> get_part_command(string:tokens(Arguments, ","), [], []);
 form_command(#raw_command{command = "PRIVMSG", tail = Arguments}) -> extract_priv_message(Arguments, []);
 form_command(#raw_command{command = "PONG", tail = _}) -> #pong_command{};
+form_command(#raw_command{command = "QUIT", tail = Arguments}) -> extract_quit_message(Arguments, []);
 form_command(#raw_command{command = Command, tail = Arguments}) ->
   #unknown_command{raw_command = lists:flatten([Command, " " | Arguments])}.
 
@@ -52,3 +53,7 @@ extract_priv_message([], []) -> undefined;
 extract_priv_message([], _TargetAcc) -> undefined;
 extract_priv_message([32|Rest], TargetAcc) -> #priv_msg_command{target = lists:reverse(TargetAcc), message = Rest};
 extract_priv_message([Letter|Rest], TargetAcc) -> extract_priv_message(Rest, [Letter|TargetAcc]).
+
+extract_quit_message([], []) -> #quit_command{};
+extract_quit_message([], Acc) -> #quit_command{message = lists:reverse(Acc)};
+extract_quit_message([Letter|Rest], Acc) -> extract_quit_message(Rest, [Letter|Acc]).
