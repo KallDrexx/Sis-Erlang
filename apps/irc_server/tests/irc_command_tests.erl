@@ -38,3 +38,6 @@ returns_undefined_if_private_message_does_not_have_target_and_message_test() ->
 
 can_parse_pong_command_test() ->
   ?assertMatch(#pong_command{}, irc_command:parse("PONG")).
+
+unknown_command_returns_unknown_command_record_test() ->
+  ?assertMatch(#unknown_command{raw_command = "omg test"}, irc_command:parse("omg test")).

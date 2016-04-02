@@ -7,7 +7,8 @@
 -export([parse/1]).
 
 parse(String) when is_list(String) ->
-  RawCommand = get_raw_command(String, []),
+  StrippedString = re:replace(String, "(^\\s+)|(\\s+$)", "", [global,{return,list}]),
+  RawCommand = get_raw_command(string:strip(StrippedString), []),
   form_command(RawCommand).
 
 get_raw_command([], Acc) -> #raw_command{command = Acc, tail = ""};
@@ -20,7 +21,9 @@ form_command(#raw_command{command = "USER", tail = Arguments}) -> get_user_comma
 form_command(#raw_command{command = "JOIN", tail = Arguments}) -> get_join_command(string:tokens(Arguments, ","), []);
 form_command(#raw_command{command = "PART", tail = Arguments}) -> get_part_command(string:tokens(Arguments, ","), [], []);
 form_command(#raw_command{command = "PRIVMSG", tail = Arguments}) -> extract_priv_message(Arguments, []);
-form_command(#raw_command{command = "PONG", tail = _}) -> #pong_command{}.
+form_command(#raw_command{command = "PONG", tail = _}) -> #pong_command{};
+form_command(#raw_command{command = Command, tail = Arguments}) ->
+  #unknown_command{raw_command = lists:flatten([Command, " " | Arguments])}.
 
 get_user_command([Username, Hostname, ServerName, RealName | _]) ->
   #user_command{user_name = Username, host_name = Hostname, real_name = RealName, server_name = ServerName};
