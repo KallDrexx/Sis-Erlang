@@ -1,9 +1,10 @@
 -module(irc_server_user_server).
 -behavior(gen_server).
 -include_lib("irc_server/include/irc_received_commands.hrl").
-
--record(state, {socket, nick=""}).
+-include_lib("irc_server/include/irc_server_messages.hrl").
 -define(TcpMessage(Message), {tcp, _Port, Message}).
+
+-record(state, {socket, nick="", username="", logged_in=false}).
 
 %% API
 -export([start_link/1, socket_accepted/2, give_socket_control/2]).
@@ -41,6 +42,8 @@ handle_cast(Request, State) ->
   {noreply, State}.
 
 handle_info(?TcpMessage(Message), State) ->
+  io:format("~p received~n", [Message]),
+
   ParsedCommand = irc_command:parse(Message),
   {ok, NewState} = handle_command(ParsedCommand, State),
   ok = inet:setopts(State#state.socket, [{active, once}]),
@@ -62,19 +65,36 @@ terminate(_Reason, _State) -> ok.
 code_change(_OldVsn, State, _Extra) -> {ok, State}.
 
 %% Private functions
-%%send(Socket, Str, Args) ->
-%%  ok = gen_tcp:send(Socket, io_lib:format(Str++"~n", Args)),
-%%  ok = inet:setopts(Socket, [{active, once}]),
-%%  ok.
+handle_command(#nick_command{nick_name = NickName}, State=#state{username = ""}) -> {ok, State#state{nick = NickName}};
+handle_command(#user_command{user_name = Username}, State=#state{nick = ""}) -> {ok, State#state{username = Username}};
 
-handle_command(#nick_command{nick_name = NickName}, State) ->
-  io:format("Nickname set to ~s~n", [NickName]),
-  {ok, State#state{nick = NickName}};
+handle_command(#nick_command{nick_name = NickName}, State=#state{logged_in = true}) -> {ok, State#state{nick = NickName}};
+handle_command(#user_command{user_name = Username}, State=#state{logged_in = true}) -> {ok, State#state{username = Username}};
 
-handle_command(#user_command{}, State) ->
-  io:format("User command received~n", []),
+handle_command(#nick_command{nick_name = NickName}, State=#state{}) ->
+  send_welcome_message(State#state.socket, NickName),
+  {ok, State#state{nick = NickName, logged_in = true}};
+
+handle_command(#user_command{user_name = Username}, State=#state{}) ->
+  send_welcome_message(State#state.socket, State#state.nick),
+  {ok, State#state{username = Username, logged_in = true}};
+
+%% Ignore non-NICK/USER commands when not logged in
+handle_command(Command, State=#state{logged_in = false}) ->
+  io:format("Command received while not logged in: ~p~n", [Command]),
   {ok, State};
 
 handle_command(Command, State) ->
   io:format("Unknown command received: ~p~n", [Command]),
   {ok, State}.
+
+send_welcome_message(Socket, Nickname) ->
+  Message = #welcome_message{sender = get_server_mask(), nickname = Nickname, message = "Welcome to Sis-Erlang"},
+  send(Socket, Message).
+
+get_server_mask() -> "localhost".
+
+send(Socket, Message) ->
+  String = irc_sent_messages:get_string(Message) ++ "\r\n",
+  io:format("Sending ~s~n", [String]),
+  gen_tcp:send(Socket, String).
