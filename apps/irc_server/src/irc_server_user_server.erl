@@ -6,30 +6,36 @@
 -define(TcpMessage(Message), {tcp, _Port, Message}).
 
 %% API
--export([start_link/1]).
+-export([start_link/1, socket_accepted/2, give_socket_control/2]).
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
 
 start_link(AcceptedSocket) ->
   {ok, Pid} = gen_server:start_link(?MODULE, AcceptedSocket, []),
-  gen_tcp:controlling_process(AcceptedSocket, Pid),
-  Pid ! socket_ready,
+  give_socket_control(AcceptedSocket, Pid),
   {ok, Pid}.
+
+socket_accepted(AcceptedSocket, []) -> start_link(AcceptedSocket).
+
+give_socket_control(Socket, Pid) ->
+  case gen_tcp:controlling_process(Socket, Pid) of
+    ok -> Pid ! socket_ready;
+    {error, not_owner} -> ok % not owner so assume owner will take care of this
+  end.
 
 init(AcceptedSocket) ->
   {ok, #state{socket = AcceptedSocket}}.
 
 handle_call(Request, _From, State) ->
-  io:format("Unhandled call received: ~p~n", [Request]),
   {noreply, State}.
 
 handle_cast(Request, State) ->
-  io:format("Unhandled cast received: ~p~n", [Request]),
   {noreply, State}.
 
-%% Prevents possible race condition that init/1 is called prior
-%% to the server becoming the controlling process
 handle_info(socket_ready, State=#state{socket = Socket}) ->
-  ok = inet:setopts(Socket, [{active, once}, {packet, line}]),
+  %% Prevents possible race condition of trying to call inet:setopts prior
+  %% to the server becoming the controlling process of the socket
+  io:format("Received socket ready message~n", []),
+  ok = inet:setopts(Socket, [list, {active, once}, {packet, line}]),
   {noreply, State};
 
 handle_info(?TcpMessage(Message), State) ->
@@ -54,10 +60,10 @@ terminate(_Reason, _State) -> ok.
 code_change(_OldVsn, State, _Extra) -> {ok, State}.
 
 %% Private functions
-send(Socket, Str, Args) ->
-  ok = gen_tcp:send(Socket, io_lib:format(Str++"~n", Args)),
-  ok = inet:setopts(Socket, [{active, once}]),
-  ok.
+%%send(Socket, Str, Args) ->
+%%  ok = gen_tcp:send(Socket, io_lib:format(Str++"~n", Args)),
+%%  ok = inet:setopts(Socket, [{active, once}]),
+%%  ok.
 
 handle_command(#nick_command{nick_name = NickName}, State) ->
   io:format("Nickname set to ~s~n", [NickName]),

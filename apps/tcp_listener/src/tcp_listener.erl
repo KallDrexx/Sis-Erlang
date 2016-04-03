@@ -1,7 +1,7 @@
 -module(tcp_listener).
 -behavior(application).
 
--export([start/2, stop/1, start/4]).
+-export([start/2, stop/1, start_link/4]).
 
 start(normal, _Args) ->
   {ok, Port} = application:get_env(port),
@@ -10,7 +10,7 @@ start(normal, _Args) ->
   {ok, OnAcceptArguments} = application:get_env(on_accept_arguments),
   tcp_listener_sup:start_link({Port, PoolSize, OnAcceptModule, OnAcceptArguments}).
 
-start(Port, PoolSize, OnAcceptModule, OnAcceptArguments) ->
+start_link(Port, PoolSize, OnAcceptModule, OnAcceptArguments) ->
   tcp_listener_sup:start_link({Port, PoolSize, OnAcceptModule, OnAcceptArguments}).
 
 stop(_) -> ok.

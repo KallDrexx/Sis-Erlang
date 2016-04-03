@@ -13,13 +13,13 @@ socket_accepted(AcceptedSocket, _Arguments) ->
 
 start(Socket) ->
   io:format("Start called ~n", []),
-  {ok, Pid} = gen_server:start(?MODULE, Socket, []),
+  {ok, Pid} = gen_server:start_link({local, ?MODULE}, ?MODULE, Socket, []),
   ok = gen_tcp:controlling_process(Socket, Pid),
+  Pid ! ready,
   {ok, Pid}.
 
 init(Socket) ->
   io:format("init called ~n", []),
-  ok = inet:setopts(Socket, [{active, once}, {packet, line}]),
   send(Socket, "Welcome!", []),
   {ok, #state{socket = Socket}}.
 
@@ -30,6 +30,10 @@ handle_call(Request, _From, State) ->
 handle_cast(Request, State) ->
   io:format("Unhandled cast received: ~p~n", [Request]),
   {noreply, State}.
+
+handle_info(ready, State) ->
+  ok = inet:setopts(State#state.socket, [list, {active, once}, {packet, line}]),
+  {noreply, State};
 
 handle_info(?TcpMessage("quit"++_), State) ->
   send(State#state.socket, "goodbye!", []),

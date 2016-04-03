@@ -3,8 +3,5 @@
 
 -export([start/2, stop/1]).
 
-start(StartType, StartArgs) ->
-  erlang:error(not_implemented_na).
-
-stop(State) ->
-  erlang:error(not_implemented).
+start(normal, _StartArgs) -> irc_server_sup:start_link().
+stop(_State) -> ok.

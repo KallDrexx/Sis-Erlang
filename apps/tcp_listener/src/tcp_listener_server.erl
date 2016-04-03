@@ -21,12 +21,12 @@ handle_cast(accept, State=#state{}) ->
   Arguments = State#state.on_accept_arguments,
 
   case gen_tcp:accept(State#state.socket) of
-  {error, closed} -> {stop, normal, State};
-  {ok, AcceptSocket} ->
-    Module:socket_accepted(AcceptSocket, Arguments),
+    {error, closed} -> {stop, normal, State};
+    {ok, AcceptSocket} ->
+      Module:socket_accepted(AcceptSocket, Arguments),
 
-    gen_server:cast(accept, State),
-    {noreply, State}
+      gen_server:cast(self(), accept),
+      {noreply, State}
   end.
 
 handle_info(_Info, State) -> {noreply, State}.
