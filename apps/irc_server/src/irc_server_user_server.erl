@@ -18,7 +18,7 @@ socket_accepted(AcceptedSocket, []) -> start_link(AcceptedSocket).
 
 give_socket_control(Socket, Pid) ->
   case gen_tcp:controlling_process(Socket, Pid) of
-    ok -> Pid ! socket_ready;
+    ok -> gen_server:cast(Pid, socket_ready);
     {error, not_owner} -> ok % not owner so assume owner will take care of this
   end.
 
@@ -26,17 +26,19 @@ init(AcceptedSocket) ->
   {ok, #state{socket = AcceptedSocket}}.
 
 handle_call(Request, _From, State) ->
+  io:format("irc_server_user_server: Unknown call: ~p~n", [Request]),
   {noreply, State}.
 
-handle_cast(Request, State) ->
-  {noreply, State}.
-
-handle_info(socket_ready, State=#state{socket = Socket}) ->
-  %% Prevents possible race condition of trying to call inet:setopts prior
-  %% to the server becoming the controlling process of the socket
+handle_cast(socket_ready, State=#state{socket = Socket}) ->
+  %% Prevents possible race condition of trying to call int:setopts prior
+  %% to the server becoming the controlling process
   io:format("Received socket ready message~n", []),
   ok = inet:setopts(Socket, [list, {active, once}, {packet, line}]),
   {noreply, State};
+
+handle_cast(Request, State) ->
+  io:format("irc_server_user_server: Unknown cast: ~p~n", [Request]),
+  {noreply, State}.
 
 handle_info(?TcpMessage(Message), State) ->
   ParsedCommand = irc_command:parse(Message),
