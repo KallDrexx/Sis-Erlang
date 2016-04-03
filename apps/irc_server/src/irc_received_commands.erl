@@ -1,5 +1,5 @@
--module(irc_command).
--include_lib("irc_server/include/irc_commands.hrl").
+-module(irc_received_commands).
+-include_lib("irc_server/include/irc_received_commands.hrl").
 
 -record(raw_command, {command="", tail=""}).
 

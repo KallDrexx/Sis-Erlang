@@ -1,6 +1,6 @@
 -module(irc_server_user_server).
 -behavior(gen_server).
--include_lib("irc_server/include/irc_commands.hrl").
+-include_lib("irc_server/include/irc_received_commands.hrl").
 
 -record(state, {socket, nick=""}).
 -define(TcpMessage(Message), {tcp, _Port, Message}).
