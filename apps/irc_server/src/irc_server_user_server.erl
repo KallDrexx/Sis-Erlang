@@ -4,7 +4,7 @@
 -include_lib("irc_server/include/irc_server_messages.hrl").
 -define(TcpMessage(Message), {tcp, _Port, Message}).
 
--record(state, {socket, nick="", username="", logged_in=false}).
+-record(state, {socket, nick="", username="", logged_in=false, host_address}).
 
 %% API
 -export([start_link/1, socket_accepted/2, give_socket_control/2]).
@@ -24,7 +24,8 @@ give_socket_control(Socket, Pid) ->
   end.
 
 init(AcceptedSocket) ->
-  {ok, #state{socket = AcceptedSocket}}.
+  {ok, {Address, _Port}} = inet:peername(AcceptedSocket),
+  {ok, #state{socket = AcceptedSocket, host_address = Address}}.
 
 handle_call(Request, _From, State) ->
   io:format("irc_server_user_server: Unknown call: ~p~n", [Request]),
@@ -44,7 +45,7 @@ handle_cast(Request, State) ->
 handle_info(?TcpMessage(Message), State) ->
   io:format("~p received~n", [Message]),
 
-  ParsedCommand = irc_command:parse(Message),
+  ParsedCommand = irc_received_commands:parse(Message),
   {ok, NewState} = handle_command(ParsedCommand, State),
   ok = inet:setopts(State#state.socket, [{active, once}]),
   {noreply, NewState};
@@ -92,7 +93,9 @@ send_welcome_message(Socket, Nickname) ->
   Message = #welcome_message{sender = get_server_mask(), nickname = Nickname, message = "Welcome to Sis-Erlang"},
   send(Socket, Message).
 
-get_server_mask() -> "localhost".
+get_server_mask() ->
+  {ok, Hostname} = inet:gethostname(),
+  Hostname.
 
 send(Socket, Message) ->
   String = irc_sent_messages:get_string(Message) ++ "\r\n",

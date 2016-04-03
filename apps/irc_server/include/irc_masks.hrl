@@ -1,0 +1,1 @@
+-record(mask_parts, {nick="", username="", host=""}).
