@@ -38,7 +38,6 @@ joining_a_table_a_second_time_test() ->
   ok = irc_channel_manager_server:join_channel("name", "user"),
   ?assertMatch(already_in_channel, irc_channel_manager_server:join_channel("name", "user")).
 
-
 %% Setup functions
 start() ->
   catch exit(irc_channel_manager_server:stop()), %% Make sure channel manager is stopped before each test run

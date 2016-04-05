@@ -2,9 +2,10 @@
 -behavior(gen_server).
 -include_lib("irc_server/include/irc_received_commands.hrl").
 -include_lib("irc_server/include/irc_server_messages.hrl").
+-include_lib("irc_server/include/irc_channel.hrl").
 -define(TcpMessage(Message), {tcp, _Port, Message}).
 
--record(state, {socket, nick="", username="", logged_in=false, host_address}).
+-record(state, {socket, nick="", username="", logged_in=false, host_address, mask=""}).
 
 %% API
 -export([start_link/1, socket_accepted/2, give_socket_control/2]).
@@ -70,13 +71,12 @@ handle_command(#nick_command{nick_name = NickName}, State=#state{username = ""})
 handle_command(#user_command{user_name = Username}, State=#state{nick = ""}) -> {ok, State#state{username = Username}};
 
 handle_command(#nick_command{nick_name = NickName}, State=#state{logged_in = true}) -> {ok, State#state{nick = NickName}};
-handle_command(#user_command{user_name = Username}, State=#state{logged_in = true}) -> {ok, State#state{username = Username}};
 
 handle_command(#nick_command{nick_name = NickName}, State=#state{}) ->
   send_welcome_message(State#state.socket, NickName),
   {ok, State#state{nick = NickName, logged_in = true}};
 
-handle_command(#user_command{user_name = Username}, State=#state{}) ->
+handle_command(#user_command{user_name = Username}, State=#state{logged_in = false}) ->
   send_welcome_message(State#state.socket, State#state.nick),
   {ok, State#state{username = Username, logged_in = true}};
 
@@ -84,6 +84,29 @@ handle_command(#user_command{user_name = Username}, State=#state{}) ->
 handle_command(Command, State=#state{logged_in = false}) ->
   io:format("Command received while not logged in: ~p~n", [Command]),
   {ok, State};
+
+handle_command(#join_command{channels = []}, State) -> {ok, State};
+handle_command(#join_command{channels = [Channel|Rest]}, State) ->
+  case irc_channel_manager_server:join_channel(Channel, State#state.username) of
+    already_in_channel -> ok;
+    ok ->
+      {ok, #channel_details{name = Channel, topic = Topic}} = irc_channel_manager_server:get_channel_details(Channel),
+      send(State#state.socket, #channel_topic{sender = get_server_mask(), channel = Channel, topic = Topic}),
+      ok
+  end,
+
+  handle_command(#join_command{channels = Rest}, State);
+
+handle_command(#part_command{channels = []}, State) -> {ok, State};
+handle_command(#part_command{channels = [Channel|Rest]}, State) ->
+  case irc_channel_manager_server:leave_channel(Channel, State#state.username) of
+    not_in_channel -> ok;
+    ok ->
+      send(State#state.socket, #user_parted_channel{sender = State#state.nick, channel = Channel}),
+      ok
+  end,
+
+  handle_command(#part_command{channels = Rest}, State);
 
 handle_command(Command, State) ->
   io:format("Unknown command received: ~p~n", [Command]),
