@@ -3,9 +3,12 @@
 -include_lib("irc_server/include/irc_received_commands.hrl").
 -include_lib("irc_server/include/irc_server_messages.hrl").
 -include_lib("irc_server/include/irc_channel.hrl").
+
 -define(TcpMessage(Message), {tcp, _Port, Message}).
+-define(ProcessGroup(NickName), "irc_user_" ++ NickName).
 
 -record(state, {socket, nick="", username="", logged_in=false, host_address, mask=""}).
+-record(user_message, {raw_message=""}).
 
 %% API
 -export([start_link/1, socket_accepted/2, give_socket_control/2]).
@@ -53,11 +56,17 @@ handle_info(?TcpMessage(Message), State) ->
 
 handle_info({tcp_closed, _Socket}, State) ->
   io:format("Socket closed~n", []),
+  unregister_user_process(State#state.nick),
   {stop, normal, State};
 
 handle_info({tcp_error, _Socket, Reason}, State) ->
   io:format("Socket error: ~p~n", [Reason]),
+  unregister_user_process(State#state.nick),
   {stop, normal, State};
+
+handle_info(#user_message{raw_message = Message}, State) ->
+  send(State#state.socket, Message),
+  {noreply, State};
 
 handle_info(Info, State) ->
   io:format("Unhandled info received: ~p~n", [Info]),
@@ -73,10 +82,12 @@ handle_command(#user_command{user_name = Username}, State=#state{nick = ""}) -> 
 
 handle_command(#nick_command{nick_name = NickName}, State=#state{}) ->
   send_welcome_message(State#state.socket, NickName),
+  register_user_process(NickName),
   {ok, State#state{nick = NickName, logged_in = true}};
 
 handle_command(#user_command{user_name = Username}, State=#state{logged_in = false}) ->
   send_welcome_message(State#state.socket, State#state.nick),
+  register_user_process(State#state.nick),
   {ok, State#state{username = Username, logged_in = true}};
 
 %% Ignore non-NICK/USER commands when not logged in
@@ -107,6 +118,10 @@ handle_command(#part_command{channels = [Channel|Rest]}, State) ->
 
   handle_command(#part_command{channels = Rest}, State);
 
+handle_command(#priv_msg_command{target = Target, message = Message}, State) ->
+  send_message_to_other_user(Target, Message, State),
+  {ok, State};
+
 handle_command(Command, State) ->
   io:format("Unknown command received: ~p~n", [Command]),
   {ok, State}.
@@ -119,7 +134,43 @@ get_server_mask() ->
   {ok, Hostname} = inet:gethostname(),
   Hostname.
 
+send(Socket, Message) when is_list(Message) ->
+  io:format("Sending ~s~n", [Message]),
+  gen_tcp:send(Socket, Message);
+
 send(Socket, Message) ->
   String = irc_sent_messages:get_string(Message) ++ "\r\n",
   io:format("Sending ~s~n", [String]),
   gen_tcp:send(Socket, String).
+
+register_user_process(NickName) ->
+  ok = pg2:create(?ProcessGroup(NickName)),
+  ok = pg2:join(?ProcessGroup(NickName), self()).
+
+unregister_user_process(NickName) ->
+  pg2:leave(?ProcessGroup(NickName), self()).
+
+send_message_to_other_user(RecipientNick, MessageContent, SenderState=#state{}) ->
+  io:format("Looking for user process ~p~n", [?ProcessGroup(RecipientNick)]),
+
+  case pg2:get_members(?ProcessGroup(RecipientNick)) of
+    {error, {no_such_group, _}} ->
+      send(SenderState#state.socket,
+        #no_such_nick{
+          sender = get_server_mask(),
+          recipient_nick = SenderState#state.nick,
+          failed_nick = RecipientNick});
+
+    [] ->
+      send(SenderState#state.socket,
+        #no_such_nick{
+          sender = get_server_mask(),
+          recipient_nick = SenderState#state.nick,
+          failed_nick = RecipientNick});
+
+    [Pid|_] ->
+      UserMask = SenderState#state.nick,
+      Message = #private_message{sender = UserMask, recipient = RecipientNick, message = MessageContent},
+      StringMessage = irc_sent_messages:get_string(Message),
+      Pid ! #user_message{raw_message = StringMessage}
+  end.
