@@ -100,8 +100,19 @@ handle_command(#join_command{channels = [Channel|Rest]}, State) ->
   case irc_channel_manager_server:join_channel(Channel, State#state.username) of
     already_in_channel -> ok;
     ok ->
-      {ok, #channel_details{name = Channel, topic = Topic}} = irc_channel_manager_server:get_channel_details(Channel),
-      send(State#state.socket, #channel_topic{sender = get_server_mask(), channel = Channel, topic = Topic}),
+      {ok, #channel_details{name = Channel, topic = Topic, users = UserMap}} = irc_channel_manager_server:get_channel_details(Channel),
+      send(State#state.socket, #channel_topic{sender = get_server_mask(), recipient_nick = State#state.nick, channel = Channel, topic = Topic}),
+      send(State#state.socket, #chan_user_list{
+          sender = get_server_mask(),
+          recipient_nick = State#state.nick,
+          channel = Channel,
+          users = maps:keys(UserMap)}),
+
+      send(State#state.socket, #chan_user_list_end{
+        sender = get_server_mask(),
+        recipient_nick = State#state.nick,
+        channel = Channel}),
+
       ok
   end,
 

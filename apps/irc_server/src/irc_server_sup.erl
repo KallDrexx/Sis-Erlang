@@ -18,4 +18,8 @@ init([]) ->
     {tcp_listener, start_link, [6667, 20, irc_server_user_sup, []]},
     permanent, 1000, worker, [tcp_listener]},
 
-  {ok, {RestartStrategy, [UserSupervisorChildSpec, TcpListenerChildSpec]}}.
+  ChannelManagerChildSpec = {irc_channel_manager_server,
+    {irc_channel_manager_server, start_link, []},
+    permanent, 1000, worker, [irc_channel_manager_server]},
+
+  {ok, {RestartStrategy, [UserSupervisorChildSpec, TcpListenerChildSpec, ChannelManagerChildSpec]}}.
