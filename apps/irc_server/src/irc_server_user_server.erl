@@ -68,9 +68,8 @@ code_change(_OldVsn, State, _Extra) -> {ok, State}.
 
 %% Private functions
 handle_command(#nick_command{nick_name = NickName}, State=#state{username = ""}) -> {ok, State#state{nick = NickName}};
+handle_command(#nick_command{nick_name = _}, State=#state{logged_in = true}) -> {ok, State};
 handle_command(#user_command{user_name = Username}, State=#state{nick = ""}) -> {ok, State#state{username = Username}};
-
-handle_command(#nick_command{nick_name = NickName}, State=#state{logged_in = true}) -> {ok, State#state{nick = NickName}};
 
 handle_command(#nick_command{nick_name = NickName}, State=#state{}) ->
   send_welcome_message(State#state.socket, NickName),
